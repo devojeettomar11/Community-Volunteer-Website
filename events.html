@@ -1,0 +1,399 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Events — Community Volunteers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50">
+  <header class="bg-white/60 sticky top-0 backdrop-blur border-b z-20">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="index.html" class="font-extrabold text-lg">Community Volunteers</a>
+      <div class="flex items-center gap-3">
+        <button id="addEventBtn" class="px-3 py-1 bg-emerald-500 text-white rounded hover:bg-emerald-600">Add Event</button>
+        <div id="authArea"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Add Event Modal -->
+  <div id="addEventModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-30">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6">
+      <h2 class="text-xl font-semibold mb-2">Add New Event</h2>
+      <form id="addEventForm" class="space-y-3">
+        <div>
+          <label class="text-sm">Title</label>
+          <input id="ev_title" required class="w-full mt-1 px-3 py-2 border rounded" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm">Date</label>
+            <input id="ev_date" type="date" required class="w-full mt-1 px-3 py-2 border rounded" />
+          </div>
+          <div>
+            <label class="text-sm">Category</label>
+            <select id="ev_cat" class="w-full mt-1 px-3 py-2 border rounded">
+              <option>Environment</option>
+              <option>Social</option>
+              <option>Health</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm">Location</label>
+          <input id="ev_loc" class="w-full mt-1 px-3 py-2 border rounded" />
+        </div>
+        <div>
+          <label class="text-sm">Description</label>
+          <textarea id="ev_desc" rows="3" class="w-full mt-1 px-3 py-2 border rounded"></textarea>
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" id="closeAddModal" class="px-4 py-2 rounded border">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded bg-emerald-500 text-white">Add Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Todos Modal -->
+  <div id="todosModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-40">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6">
+      <div class="flex justify-between items-center mb-3">
+        <h3 id="todosTitle" class="text-lg font-semibold">Todos</h3>
+        <div class="flex items-center gap-2">
+          <span id="todosCount" class="text-sm text-slate-500"></span>
+          <button id="closeTodos" class="px-3 py-1 rounded border">Close</button>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <form id="todoForm" class="flex gap-2">
+          <input id="todoText" placeholder="Add a task..." class="flex-1 px-3 py-2 border rounded" required />
+          <button class="px-4 py-2 rounded bg-sky-500 text-white">Add</button>
+        </form>
+      </div>
+
+      <ul id="todoList" class="space-y-2 max-h-80 overflow-auto"></ul>
+    </div>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold">Upcoming Events</h1>
+        <p class="text-sm text-slate-600">Find events and register.</p>
+      </div>
+      <div class="flex gap-2">
+        <input id="q" class="px-3 py-2 border rounded" placeholder="Search..." />
+        <select id="cat" class="px-3 py-2 border rounded">
+          <option value="">All</option>
+          <option>Environment</option>
+          <option>Social</option>
+          <option>Health</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="grid" class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+  </main>
+
+  <footer class="border-t">
+    <div class="max-w-6xl mx-auto px-6 py-6 text-sm text-slate-500">© 2025 Community Volunteers</div>
+  </footer>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+    const authArea = document.getElementById('authArea');
+
+    const LOCAL_EVENTS_KEY = 'cv_local_events';
+    const REG_KEY = 'cv_regs';
+    const TODOS_KEY = 'cv_todos';
+
+    function uid(prefix='id'){ return prefix + '_' + Date.now() + '_' + Math.floor(Math.random()*10000); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+    async function renderAuth(){
+      const user = JSON.parse(localStorage.getItem('cv_user') || 'null');
+      authArea.innerHTML = user
+        ? `<div class="flex items-center gap-3"><div class="text-sm">Hi, ${escapeHtml(user.email.split('@')[0])}</div><button onclick="logout()" class="px-3 py-1 bg-slate-100 rounded text-sm">Logout</button></div>`
+        : `<a href="login.html" class="px-3 py-1 bg-teal-500 text-white rounded text-sm">Login</a>`;
+    }
+    function logout(){ localStorage.removeItem('cv_user'); renderAuth(); }
+    window.logout = logout;
+
+    function getLocalEvents(){ return JSON.parse(localStorage.getItem(LOCAL_EVENTS_KEY) || '[]'); }
+    function saveLocalEvents(arr){ localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(arr)); }
+    function getRegs(){ return JSON.parse(localStorage.getItem(REG_KEY) || '[]'); }
+    function saveRegs(arr){ localStorage.setItem(REG_KEY, JSON.stringify(arr)); }
+    function getTodos(){ return JSON.parse(localStorage.getItem(TODOS_KEY) || '{}'); }
+    function saveTodos(obj){ localStorage.setItem(TODOS_KEY, JSON.stringify(obj)); }
+
+    function ensureSampleEventExists(){
+      const local = getLocalEvents();
+      if(local.length === 0){
+        const sample = {
+          id: uid('local'),
+          title: 'Tree Planting — Community Park',
+          date: new Date(Date.now() + 7*24*3600*1000).toISOString().split('T')[0],
+          category: 'Environment',
+          location: 'City Community Park',
+          desc: 'Join volunteers to plant native trees and rejuvenate the park. Tools & tea provided.'
+        };
+        local.push(sample);
+        saveLocalEvents(local);
+      }
+    }
+
+    async function loadEvents(){
+      let apiList = [];
+      try {
+        const res = await fetch(`${API_URL}/events`);
+        if(res.ok) apiList = await res.json();
+      } catch (err){ console.warn('API not reachable', err); }
+      ensureSampleEventExists();
+      const local = getLocalEvents().map(e=>({ ...e }));
+      const normalizedApi = (apiList || []).map(e => ({
+        id: String(e.id ?? uid('api')),
+        title: e.title ?? 'Untitled',
+        desc: e.desc ?? (e.description ?? ''),
+        date: e.date ?? '',
+        location: e.location ?? '',
+        category: e.category ?? '',
+      }));
+      renderList([...local, ...normalizedApi]);
+    }
+
+    function renderList(list){
+      const q = document.getElementById('q').value.toLowerCase();
+      const cat = document.getElementById('cat').value;
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      const filtered = list.filter(e=>{
+        const matchesCat = !cat || e.category === cat;
+        const matchesQ = !q || (e.title || '').toLowerCase().includes(q) || (e.desc || '').toLowerCase().includes(q);
+        return matchesCat && matchesQ;
+      });
+
+      if(filtered.length===0){ grid.innerHTML = '<div class="text-slate-600">No events.</div>'; return; }
+
+      const regs = getRegs();
+
+      filtered.forEach(ev=>{
+        const card = document.createElement('div');
+        card.className='p-5 bg-white rounded-xl shadow hover:shadow-md transition';
+        const regCount = regs.filter(r => String(r.eventId)===String(ev.id)).length;
+        const isRegistered = (() => {
+          const user = JSON.parse(localStorage.getItem('cv_user')||'null');
+          return user && regs.some(r => String(r.eventId)===String(ev.id) && r.userEmail===user.email);
+        })();
+        const canDelete = String(ev.id).includes('local');
+
+        card.innerHTML = `
+          <h3 class="font-semibold text-lg">${escapeHtml(ev.title)}</h3>
+          <div class="text-sm text-slate-500 mt-1">${escapeHtml(ev.date || 'Date TBA')} • ${escapeHtml(ev.location || 'Location TBA')}</div>
+          <p class="mt-3 text-slate-700">${escapeHtml(ev.desc || '')}</p>
+          <div class="mt-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button data-id="${ev.id}" class="px-3 py-2 registerBtn rounded text-white ${isRegistered ? 'bg-slate-400' : 'bg-teal-500 hover:bg-teal-600'}">${isRegistered ? 'Registered ✓' : 'Register'}</button>
+              <button data-id="${ev.id}" class="px-3 py-2 todosBtn rounded border">Todos</button>
+              ${canDelete ? `<button data-id="${ev.id}" class="px-3 py-2 deleteEventBtn rounded border text-red-500">Delete</button>` : ''}
+            </div>
+            <div class="text-sm text-slate-500">${escapeHtml(ev.category || '')} • ${regCount} signed</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // attach handlers AFTER DOM is rendered; use currentTarget for correctness
+      document.querySelectorAll('.registerBtn').forEach(b => b.addEventListener('click', onRegister));
+      document.querySelectorAll('.todosBtn').forEach(b => b.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id || (e.target && e.target.dataset && e.target.dataset.id);
+        openTodosModal(id, ((list.find(i=>String(i.id)===String(id))||{}).title || 'Todos'));
+      }));
+      document.querySelectorAll('.deleteEventBtn').forEach(btn => {
+        btn.addEventListener('click', function(e){
+          // use currentTarget to ensure we read the dataset from the actual button even if inner element was clicked
+          const id = e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id ? e.currentTarget.dataset.id : (e.target && e.target.dataset && e.target.dataset.id);
+          if(!id){ alert('Could not determine event id to delete.'); return; }
+          if(confirm('Delete this local event? This cannot be undone.')){
+            deleteLocalEvent(String(id));
+          }
+        });
+      });
+    }
+
+    function deleteLocalEvent(eventId){
+      let local = getLocalEvents();
+      const beforeLen = local.length;
+      local = local.filter(x => String(x.id) !== String(eventId));
+      saveLocalEvents(local);
+      // remove todos and regs
+      const todos = getTodos();
+      if(todos[eventId]){ delete todos[eventId]; saveTodos(todos); }
+      let regs = getRegs();
+      regs = regs.filter(r => String(r.eventId) !== String(eventId));
+      saveRegs(regs);
+      // reload and feedback
+      loadEvents();
+      if(beforeLen === local.length) {
+        // nothing was removed
+        alert('Event not found or could not be deleted.');
+      } else {
+        alert('Event deleted.');
+      }
+    }
+
+    async function onRegister(e){
+      const id = e.currentTarget ? e.currentTarget.dataset.id : (e.target && e.target.dataset && e.target.dataset.id);
+      const user = JSON.parse(localStorage.getItem('cv_user') || 'null');
+      if(!user){ if(confirm('Login required. Go to login?')) window.location.href='login.html'; return; }
+      try {
+        const res = await fetch(`${API_URL}/signup`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ eventId: id, userEmail: user.email })
+        });
+        if(res.ok){
+          const data = await res.json().catch(()=>({}));
+          if(data && data.success) { markRegisteredLocal(id, user.email); alert('Signed up successfully'); loadEvents(); return; }
+        }
+      } catch (err){ console.warn('API signup failed, saving locally', err); }
+      markRegisteredLocal(id, user.email);
+      alert('Signed up (saved locally)');
+      loadEvents();
+    }
+
+    function markRegisteredLocal(eventId, userEmail){
+      const regs = getRegs();
+      if(!regs.some(r => String(r.eventId)===String(eventId) && r.userEmail===userEmail)){
+        regs.push({ eventId, userEmail });
+        saveRegs(regs);
+      }
+    }
+
+    // Add event modal wiring
+    const addEventBtn = document.getElementById('addEventBtn');
+    const addEventModal = document.getElementById('addEventModal');
+    const closeAddModal = document.getElementById('closeAddModal');
+    const addEventForm = document.getElementById('addEventForm');
+
+    addEventBtn.addEventListener('click', ()=> { addEventModal.classList.remove('hidden'); addEventModal.classList.add('flex'); addEventForm.reset(); document.getElementById('ev_title').focus(); });
+    closeAddModal.addEventListener('click', ()=> { addEventModal.classList.add('hidden'); addEventModal.classList.remove('flex'); });
+    addEventModal.addEventListener('click', (e)=> { if(e.target===addEventModal) { addEventModal.classList.add('hidden'); addEventModal.classList.remove('flex'); }});
+
+    addEventForm.addEventListener('submit', (ev)=>{
+      ev.preventDefault();
+      const title = document.getElementById('ev_title').value.trim();
+      const date = document.getElementById('ev_date').value;
+      const category = document.getElementById('ev_cat').value;
+      const location = document.getElementById('ev_loc').value.trim();
+      const desc = document.getElementById('ev_desc').value.trim();
+      if(!title){ alert('Title required'); return; }
+      const local = getLocalEvents();
+      const newEv = { id: uid('local'), title, date, category, location, desc };
+      local.unshift(newEv);
+      saveLocalEvents(local);
+      addEventModal.classList.add('hidden'); addEventModal.classList.remove('flex');
+      loadEvents();
+      setTimeout(()=> openTodosModal(newEv.id, newEv.title), 200);
+    });
+
+    // Todos (same as before)
+    const todosModal = document.getElementById('todosModal');
+    const todosTitle = document.getElementById('todosTitle');
+    const todosCount = document.getElementById('todosCount');
+    const todoList = document.getElementById('todoList');
+    const todoForm = document.getElementById('todoForm');
+    const todoText = document.getElementById('todoText');
+    const closeTodos = document.getElementById('closeTodos');
+    let activeTodoEventId = null;
+
+    function openTodosModal(eventId, title){
+      activeTodoEventId = eventId;
+      todosTitle.textContent = `Todos — ${title || ''}`;
+      renderTodos();
+      todosModal.classList.remove('hidden');
+      todosModal.classList.add('flex');
+      todoText.focus();
+    }
+    function closeTodosModal(){ todosModal.classList.add('hidden'); todosModal.classList.remove('flex'); activeTodoEventId = null; }
+    closeTodos.addEventListener('click', closeTodosModal);
+    todosModal.addEventListener('click', (e)=> { if(e.target===todosModal) closeTodosModal(); });
+
+    function renderTodos(){
+      const all = getTodos();
+      const tasks = all[activeTodoEventId] || [];
+      todoList.innerHTML = '';
+      todosCount.textContent = `${tasks.length} task${tasks.length!==1 ? 's' : ''}`;
+      if(tasks.length===0){ todoList.innerHTML = '<div class="text-slate-500">No tasks yet — add one above.</div>'; return; }
+      tasks.forEach(t=>{
+        const li = document.createElement('li');
+        li.className = 'p-2 border rounded';
+        li.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" class="todoChk" data-id="${t.id}" ${t.done ? 'checked' : ''}/>
+              <div class="${t.done ? 'line-through text-slate-400' : ''} todoTextDisplay">${escapeHtml(t.text)}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="editTodo text-sm text-sky-600" data-id="${t.id}">Edit</button>
+              <button class="delTodo text-sm text-red-500" data-id="${t.id}">Delete</button>
+            </div>
+          </div>
+        `;
+        todoList.appendChild(li);
+      });
+
+      todoList.querySelectorAll('.todoChk').forEach(cb => cb.addEventListener('change', (e)=> toggleTodoDone(e.currentTarget.dataset.id)));
+      todoList.querySelectorAll('.delTodo').forEach(b => b.addEventListener('click', (e)=> { if(confirm('Delete this task?')) deleteTodo(e.currentTarget.dataset.id); }));
+      todoList.querySelectorAll('.editTodo').forEach(b => b.addEventListener('click', (e)=> startEditTodoInline(e.currentTarget.dataset.id, e.currentTarget)));
+    }
+
+    todoForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); const text = todoText.value.trim(); if(!text) return; addTodo(activeTodoEventId, text); todoText.value=''; renderTodos(); });
+
+    function addTodo(eventId, text){
+      const all = getTodos();
+      const tasks = all[eventId] || [];
+      tasks.unshift({ id: uid('todo'), text, done: false });
+      all[eventId] = tasks;
+      saveTodos(all);
+      renderTodos();
+    }
+    function toggleTodoDone(todoId){
+      const all = getTodos(); const tasks = all[activeTodoEventId] || []; const t = tasks.find(x=>x.id===todoId);
+      if(t){ t.done = !t.done; saveTodos(all); renderTodos(); }
+    }
+    function deleteTodo(todoId){
+      const all = getTodos(); let tasks = all[activeTodoEventId] || []; tasks = tasks.filter(x=>x.id!==todoId); all[activeTodoEventId]=tasks; saveTodos(all); renderTodos();
+    }
+
+    function startEditTodoInline(todoId, editButton){
+      const li = editButton.closest('li'); if(!li) return;
+      const displayDiv = li.querySelector('.todoTextDisplay'); const oldText = displayDiv ? displayDiv.textContent : '';
+      const controls = document.createElement('div'); controls.className='flex items-center gap-2';
+      controls.innerHTML = `<input class="editInput px-2 py-1 border rounded" value="${escapeHtml(oldText)}" /><button class="saveEdit px-3 py-1 rounded bg-green-500 text-white">Save</button><button class="cancelEdit px-3 py-1 rounded border">Cancel</button>`;
+      displayDiv.style.display='none'; editButton.style.display='none';
+      const actionsDiv = editButton.parentElement;
+      actionsDiv.appendChild(controls);
+      const input = controls.querySelector('.editInput');
+      controls.querySelector('.saveEdit').addEventListener('click', ()=> { const newText = input.value.trim(); if(!newText){ alert('Task text required'); return; } saveTodoEdit(todoId, newText); });
+      controls.querySelector('.cancelEdit').addEventListener('click', ()=> { controls.remove(); displayDiv.style.display=''; editButton.style.display=''; });
+      input.focus();
+    }
+    function saveTodoEdit(todoId, newText){ const all = getTodos(); const tasks = all[activeTodoEventId] || []; const t = tasks.find(x=>x.id===todoId); if(t){ t.text = newText; saveTodos(all); renderTodos(); } }
+
+    document.getElementById('q').addEventListener('input', loadEvents);
+    document.getElementById('cat').addEventListener('change', loadEvents);
+
+    // optional demo user for testing:
+    // localStorage.setItem('cv_user', JSON.stringify({ email: 'demo@example.com' }));
+
+    renderAuth();
+    loadEvents();
+  </script>
+</body>
+</html>

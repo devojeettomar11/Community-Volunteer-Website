@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Contact — Community Volunteers</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Inline styles for extra polish -->
+  <style>
+    :root{
+      --glass: rgba(255,255,255,0.78);
+      --accent1: #06b6d4;
+      --accent2: #14b8a6;
+    }
+    body{
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:
+        radial-gradient(800px 400px at 10% 10%, rgba(6,182,212,0.04), transparent 8%),
+        radial-gradient(700px 350px at 90% 90%, rgba(20,184,166,0.03), transparent 8%),
+        linear-gradient(180deg,#f8fafc,#ffffff);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      color: #0f172a;
+    }
+
+    .glass {
+      background: var(--glass);
+      border: 1px solid rgba(255,255,255,0.6);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 12px 36px rgba(2,6,23,0.06);
+    }
+
+    /* Sticky note */
+    .note {
+      background: linear-gradient(180deg,#fffbe6,#fff4d6);
+      border-left: 4px solid #ffd34d;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.06);
+      transform: rotate(-2deg);
+    }
+
+    /* Fancy submit button */
+    .btn-submit {
+      background-image: linear-gradient(90deg,var(--accent2),var(--accent1));
+      box-shadow: 0 8px 24px rgba(6,182,212,0.14);
+      transition: transform .16s ease, box-shadow .16s ease, opacity .12s;
+    }
+    .btn-submit:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(6,182,212,0.18); }
+    .btn-submit:active { transform: translateY(-1px) scale(.997); }
+
+    /* success badge animation */
+    .success-burst {
+      animation: pop 420ms cubic-bezier(.2,.9,.2,1);
+    }
+    @keyframes pop {
+      0% { transform: scale(.95); opacity: 0; }
+      60% { transform: scale(1.04); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* small responsive */
+    @media (max-width: 768px) {
+      .note { transform: none; }
+    }
+  </style>
+</head>
+<body data-page="contact">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-white/60 backdrop-blur border-b">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white shadow">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M12 2v20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="font-extrabold text-lg">Community Volunteers</span>
+      </a>
+
+      <div id="authArea" class="hidden md:block"></div>
+      <div class="md:hidden">
+        <a href="login.html" class="px-3 py-1 bg-teal-500 text-white rounded">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+    <div class="grid gap-8 md:grid-cols-3 items-start">
+
+      <!-- Left: note + info -->
+      <aside class="md:col-span-1">
+        <div class="note p-6 rounded-xl">
+          <div class="flex items-start gap-3">
+            <div class="w-12 h-12 rounded bg-yellow-200 flex items-center justify-center text-yellow-700 shadow-sm">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M12 2v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-slate-800">Quick note</h3>
+              <p class="mt-2 text-sm text-slate-700">Use this form to request event listings or ask about volunteering. We'll respond within 1–3 business days.</p>
+            </div>
+          </div>
+
+          <hr class="my-4 border-yellow-100" />
+
+          <div class="text-sm text-slate-700">
+            <div class="font-medium">Pro tip:</div>
+            <ul class="mt-2 list-inside list-disc text-slate-700">
+              <li>Include event location & preferred dates.</li>
+              <li>Mention expected volunteers required.</li>
+              <li>Attach links in the message for faster processing.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-white rounded-xl shadow">
+          <div class="text-sm text-slate-600">Contact Info</div>
+          <div class="mt-2 font-semibold">hello@community.org</div>
+          <div class="text-sm text-slate-500 mt-1">+91 98765 43210</div>
+          <div class="text-sm text-slate-500 mt-1">Community Hall, Your City</div>
+        </div>
+      </aside>
+
+      <!-- Right: contact form -->
+      <section class="md:col-span-2">
+        <div class="glass p-6 rounded-2xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold">Get in touch</h1>
+              <p class="text-sm text-slate-600 mt-1">Tell us about your event or ask any question. We're happy to help.</p>
+            </div>
+
+            <div id="statusBadge" class="hidden items-center gap-2 text-sm text-green-600 font-medium">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span id="statusText">Message sent</span>
+            </div>
+          </div>
+
+          <form id="form" class="mt-6 grid gap-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <input id="name" name="name" type="text" placeholder="Your full name" required class="p-3 border rounded-lg focus:ring-0 focus:border-teal-400" />
+              <input id="email" name="email" type="email" placeholder="you@example.com" required class="p-3 border rounded-lg focus:ring-0 focus:border-teal-400" />
+            </div>
+
+            <input id="subject" name="subject" type="text" placeholder="Subject (e.g., Request to list event)" class="p-3 border rounded-lg focus:ring-0 focus:border-teal-400" />
+
+            <textarea id="message" name="message" rows="6" placeholder="Message — include date, location, volunteers needed, links…" class="p-3 border rounded-lg focus:ring-0 focus:border-teal-400"></textarea>
+
+            <div class="flex items-center justify-between gap-4">
+              <button id="sendBtn" type="submit" class="btn-submit px-6 py-3 rounded-xl text-white font-semibold shadow">
+                <span class="inline-flex items-center gap-2">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M2 12l8-3 5 2 7-3-8 9-5 3-7-8z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Send message
+                </span>
+              </button>
+
+              <div id="formStatus" class="text-sm text-slate-600">We'll reply within 1–3 business days.</div>
+            </div>
+          </form>
+        </div>
+
+        <!-- small map/illustration -->
+        <div class="mt-6">
+          <div class="rounded-xl overflow-hidden">
+            
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="border-t">
+    <div class="max-w-6xl mx-auto px-6 py-6 text-sm text-slate-500">© 2025 Community Volunteers</div>
+  </footer>
+
+  <!-- Shared JS (central app) -->
+  <script src="js/app.js"></script>
+
+  <!-- Extra page script to enhance UX with status animation -->
+  <script>
+    // ensure initContact from app.js handles the submit; here we hook to animate status badge
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('form');
+      const statusBadge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      const formStatus = document.getElementById('formStatus');
+      const sendBtn = document.getElementById('sendBtn');
+
+      // Listen for successful submission via global handler: app.js sets #formStatus text and resets form.
+      // We'll observe DOM changes to #formStatus and show animated badge on success.
+      const obs = new MutationObserver((mutations) => {
+        mutations.forEach(m => {
+          if (m.type === 'childList' || m.type === 'characterData') {
+            const txt = (formStatus.textContent || '').toLowerCase();
+            if (txt.includes('thanks') || txt.includes('sent') || txt.includes('contact you soon')) {
+              // show badge briefly
+              statusText.textContent = formStatus.textContent;
+              statusBadge.classList.remove('hidden');
+              statusBadge.classList.add('success-burst');
+              // micro animation on send button
+              sendBtn.classList.add('transform');
+              setTimeout(() => {
+                statusBadge.classList.remove('success-burst');
+                // keep badge visible for a few seconds, then hide
+                setTimeout(() => statusBadge.classList.add('hidden'), 3000);
+              }, 500);
+            }
+          }
+        });
+      });
+
+      if (formStatus) {
+        obs.observe(formStatus, { characterData: true, childList: true, subtree: true });
+      }
+    });
+  </script>
+</body>
+</html>
